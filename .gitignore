@@ -28,4 +28,4 @@
 *.app
 
 .DS_Store
-
+.build*
