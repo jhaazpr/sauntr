@@ -13,6 +13,7 @@ int sensorValue3 = 0;
 boolean newMeasure = true;
 int count = 0;
 float avg = 0;
+int lastWeight = 0;
 
 time_t lastTime;
 
@@ -24,7 +25,7 @@ void loop() {
   sensorValue0 = analogRead(analogInPin0);
   sensorValue1 = analogRead(analogInPin1);
   sensorValue2 = analogRead(analogInPin2);
-  sensorValue3 = analogRead(analogInPin3);         
+  sensorValue3 = analogRead(analogInPin3);       
 
 //  // print the results to the serial monitor:
 //  Serial.print("sensor0 = " );                       
@@ -36,14 +37,13 @@ void loop() {
 //  Serial.print(" | sensor3 = " );                       
 //  Serial.println(sensorValue3);
 
-  int newWeight = (sensorValue0 + sensorValue1 + sensorValue2 + sensorValue3);
+  int newWeight = (sensorValue0);// + sensorValue1 + sensorValue2 + sensorValue3);
   if (newMeasure) {
     lastTime = now();
     newMeasure = false;
   } else {
-    
     if ((now() - lastTime) < 10) {
-      if (newWeight > thresh) {
+      if (newWeight > thresh && lastWeight == 0) {
         Serial.println("count");
         count = count + 1;
       }
@@ -54,10 +54,11 @@ void loop() {
       Serial.println(avg);
       count = 0;
     }
+    lastWeight = newWeight;
   }
 
   // wait 2 milliseconds before the next loop
-  delay(500);
+  delay(200);
 }
 
 
