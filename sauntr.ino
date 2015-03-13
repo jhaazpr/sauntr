@@ -22,8 +22,8 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 #define WEBPAGE "/input/4JdODwdWr9hqg8K6xoRq.txt"
 #define PRIVATE "b5v8WyvXKNI27r1npAV2"
 
-#define WLAN_SSID       "ID"
-#define WLAN_PASS       "PASS"
+#define WLAN_SSID       "FangPhone"
+#define WLAN_PASS       "3141592653"
 const int analogInPin0 = A0;  // Analog input pin that the FSR is attached to
 const int analogInPin1 = A1;  // Analog input pin that the FSR is attached to
 const int analogInPin2 = A2;  // Analog input pin that the FSR is attached to
@@ -156,28 +156,65 @@ void loop() {
 
 void makePost(int value) {
 
-  phant.add("steps", avg);
 //  Serial.println(phant.post());
-  Adafruit_CC3000_Client www = cc3000.connectTCP(ip, 80);
-  if (www.connected()) {
+  Adafruit_CC3000_Client client = cc3000.connectTCP(ip, 80);
+  Serial.println(phant.post());
+  if (client.connected()) {
     Serial.println("Posting...");
-    www.print(phant.post());
-//    www.fastrprint(F("POST "));
-//    www.fastrprint(WEBPAGE);
-//    www.fastrprint(F(" HTTP/1.1\r\n"));
-//    www.fastrprint(F("Host: ")); www.fastrprint(WEBSITE); www.fastrprint(F("\r\n"));
-//    www.fastrprint(F("Phant-Private-Key: ")); www.fastrprint(PRIVATE);www.fastrprint(F("\r\n"));
-//    www.fastrprint(F("Connection: close")); www.fastrprint(F("\r\n"));
-//    www.fastrprint(F("Content-Type: application/x-www-form-urlencoded")); www.fastrprint(F("\r\n"));
-//    www.fastrprint(F("Content-Length: 12")); www.fastrprint(F("\r\n"));
-//    www.fastrprint(F("\r\n"));
-//    www.println();
+    phant.add("steps", avg);
+    client.println(phant.post());
+//    client.println(phant.get());
+    /* Read data until either the connection is closed, or the idle timeout is reached. */ 
+    unsigned long lastRead = millis();
+    while (client.connected() && (millis() - lastRead < IDLE_TIMEOUT_MS)) {
+      while (client.available()) {
+        char c = client.read();
+        Serial.print(c);
+        lastRead = millis();
+      }
+    }
+//    client.fastrprint(F("POST "));
+//    client.fastrprint(WEBPAGE);
+//    client.fastrprint(F(" HTTP/1.1\r\n"));
+//    Serial.print("POST ");
+//    Serial.print(WEBPAGE);
+//    Serial.print(" HTTP/1.1\r\n");
+//    client.fastrprint(F("Host: ")); client.fastrprint(WEBSITE); client.fastrprint(F("\r\n"));
+//    Serial.print("Host: "); Serial.print(WEBSITE); Serial.print("\r\n");
+//    
+//    client.fastrprint(F("Phant-Private-Key: ")); client.fastrprint(PRIVATE);client.fastrprint(F("\r\n"));
+//    Serial.print("Phant-Private-Key: "); Serial.print(PRIVATE); Serial.print("\r\n");
+//        
+//    client.fastrprint(F("Connection: close")); client.fastrprint(F("\r\n"));
+//    Serial.print("Connection: close"); Serial.print("\r\n");
+//    
+//    client.fastrprint(F("Content-Type: application/x-www-form-urlencoded")); client.fastrprint(F("\r\n"));
+//    Serial.print("Content-Type: application/x-www-form-urlencoded"); Serial.print("\r\n");
+//    
+//    client.fastrprint(F("Content-Length: 12")); client.fastrprint(F("\r\n"));
+//    Serial.print("Content-Length: 12");
+//    client.fastrprint(F("\r\n"));
+//    client.println();
+//    Serial.println("Posted...");
   } else {
     Serial.println(F("Connection failed"));    
     return;
   }
-  www.close();
-  Serial.println("Posted");
+  
+//  /* For get requests Read data until either the connection is closed, or the idle timeout is reached. */ 
+//  unsigned long lastRead = millis();
+//  while (client.connected() && (millis() - lastRead < IDLE_TIMEOUT_MS)) {
+//    while (client.available()) {
+//      char c = www.read();
+//      Serial.print(c);
+//      lastRead = millis();
+//    }
+//  }
+//  client.close();
+  Serial.println(F("-------------------------------------"));
+  
+  client.close();
+  Serial.println("done");
 }
 
 
