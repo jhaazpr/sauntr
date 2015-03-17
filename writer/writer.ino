@@ -22,7 +22,7 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 
 #define WLAN_SSID       "CalVisitor"
 #define WLAN_PASS       ""
-#define WLAN_SECURITY   WLAN_SEC_UNSEC
+#define WLAN_SECURITY   WLAN_SEC_WPA2
 // Security can be WLAN_SEC_UNSEC, WLAN_SEC_WEP, WLAN_SEC_WPA or WLAN_SEC_WPA2
 const int analogInPin0 = A0;  // Analog input pin that the FSR is attached to
 const int analogInPin1 = A1;  // Analog input pin that the FSR is attached to
@@ -83,7 +83,7 @@ void loop() {
   sensorValue1 = analogRead(analogInPin1);
 
   int newWeight = (sensorValue0);
-  Serial.println(newWeight);
+//  Serial.println(newWeight);
   if (newMeasure) {
     lastTime = now();
     newMeasure = false;
@@ -96,9 +96,9 @@ void loop() {
     } else {
       lastTime = now();
       newMeasure = true;
-      avg = 0.5 * (avg + count);
+      avg = 1.0 * (count);
       Serial.println(avg);
-//      makePost(avg);
+      makePost(avg);
       count = 0;
     }
     lastWeight = newWeight;
