@@ -43,10 +43,10 @@ It might not work on all networks!
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT,
                                          SPI_CLOCK_DIVIDER); // you can change this clock speed
 
-#define WLAN_SSID       "kidd"           // cannot be longer than 32 characters!
-#define WLAN_PASS       "yousneakymom"
+#define WLAN_SSID       "CalVisitor"           // cannot be longer than 32 characters!
+#define WLAN_PASS       ""
 // Security can be WLAN_SEC_UNSEC, WLAN_SEC_WEP, WLAN_SEC_WPA or WLAN_SEC_WPA2
-#define WLAN_SECURITY   WLAN_SEC_WPA2
+#define WLAN_SECURITY   WLAN_SEC_UNSEC
 
 #define IDLE_TIMEOUT_MS  3000      // Amount of time to wait (in milliseconds) with no data 
                                    // received before closing the connection.  If you know the server
@@ -55,10 +55,10 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 // What page to grab!
 #define IDLE_TIMEOUT_MS  3000
 #define WEBSITE "data.sparkfun.com"
-#define WEBPAGE "/output/4JdODwdWr9hqg8K6xoRq.json"
+#define WEBPAGE "/output/4JdODwdWr9hqg8K6xoRq.csv"
 #define PRIVATE "b5v8WyvXKNI27r1npAV2"
 
-#define BUF_SIZE 1024 //for reading 
+#define BUF_SIZE 32 //for reading 
 #define SAMP_INTERVAL 10000 // milliseconds between running calculations and sending data
 
 /* Non-network-related initializations */
@@ -70,6 +70,7 @@ float avg = 0;
 int lastWeight = 0;
 time_t lastTime;
 const int thresh = 30;
+char readBuf[BUF_SIZE];
 
 /**************************************************************************/
 /*!
@@ -139,7 +140,9 @@ void setup(void)
 
 void loop(void)
 {
-  readCSV(NULL);
+  readCSV();
+  Serial.println("In read buffer: ");
+  Serial.println(readBuf);
   delay(SAMP_INTERVAL);
 }
 
@@ -207,9 +210,11 @@ bool displayConnectionDetails(void)
   }
 }
 
-void readCSV(char *buffer)
+/* Locs the first digit into readBuf */
+void readCSV()
 {
   /* Set up socket and send input GET request */
+  Serial.println("Connecting to website...");
   Adafruit_CC3000_Client www = cc3000.connectTCP(ip, 80);
   if (www.connected()) {
     www.fastrprint(F("GET "));
@@ -228,9 +233,25 @@ void readCSV(char *buffer)
   
   /* Read data until either the connection is closed, or the idle timeout is reached. */ 
   unsigned long lastRead = millis();
+  int i = 0;
+  int reachedSecondLine = 0;
+  int reachedComma = 0;
   while (www.connected() && (millis() - lastRead < IDLE_TIMEOUT_MS)) {
     while (www.available()) {
       char c = www.read();
+//      if (!reachedSecondLine && c =='\n' || c =='\r\n') {
+//        reachedSecondLine = 1;
+//      }
+//      if (reachedSecondLine) {
+//        if (!reachedComma && c ==',') {
+//          reachedComma = 1;
+//          readBuf[i] = '\0';
+//        }
+//        if (!reachedComma && i < BUF_SIZE) {
+//          readBuf[i] = c;
+//          i++;
+//        }
+//      }
       Serial.print(c);
       lastRead = millis();
     }
