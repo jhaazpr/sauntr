@@ -14,16 +14,16 @@
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT,
                          SPI_CLOCK_DIVIDER); // you can change this clock speed
 
-// Security can be WLAN_SEC_UNSEC, WLAN_SEC_WEP, WLAN_SEC_WPA or WLAN_SEC_WPA2
-#define WLAN_SECURITY   WLAN_SEC_WPA2
 
 #define IDLE_TIMEOUT_MS  3000
 #define WEBSITE "data.sparkfun.com"
 #define WEBPAGE "/input/4JdODwdWr9hqg8K6xoRq.txt"
 #define PRIVATE "b5v8WyvXKNI27r1npAV2"
 
-#define WLAN_SSID       "1492"
+#define WLAN_SSID       "CalVisitor"
 #define WLAN_PASS       ""
+#define WLAN_SECURITY   WLAN_SEC_WPA2
+// Security can be WLAN_SEC_UNSEC, WLAN_SEC_WEP, WLAN_SEC_WPA or WLAN_SEC_WPA2
 const int analogInPin0 = A0;  // Analog input pin that the FSR is attached to
 const int analogInPin1 = A1;  // Analog input pin that the FSR is attached to
 const int thresh = 30;
@@ -83,19 +83,20 @@ void loop() {
   sensorValue1 = analogRead(analogInPin1);
 
   int newWeight = (sensorValue0);
+//  Serial.println(newWeight);
   if (newMeasure) {
     lastTime = now();
     newMeasure = false;
   } else {
     if ((now() - lastTime) < 10) {
-      if (newWeight > thresh && (lastWeight-newWeight) < 0) {
+      if (newWeight > thresh && (lastWeight) < 30) {
         Serial.println("count");
         count = count + 1;
       }
     } else {
       lastTime = now();
       newMeasure = true;
-      avg = 0.5 * (avg + count);
+      avg = 1.0 * (count);
       Serial.println(avg);
       makePost(avg);
       count = 0;
