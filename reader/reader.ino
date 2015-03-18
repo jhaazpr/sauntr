@@ -1,30 +1,6 @@
-/*************************************************** 
-  This is an example for the Adafruit CC3000 Wifi Breakout & Shield
-
-  Designed specifically to work with the Adafruit WiFi products:
-  ----> https://www.adafruit.com/products/1469
-
-  Adafruit invests time and resources providing this open source code, 
-  please support Adafruit and open-source hardware by purchasing 
-  products from Adafruit!
-
-  Written by Limor Fried & Kevin Townsend for Adafruit Industries.  
-  BSD license, all text above must be included in any redistribution
- ****************************************************/
- 
- /*
-This example does a test of the TCP client capability:
-  * Initialization
-  * Optional: SSID scan
-  * AP connection
-  * DHCP printout
-  * DNS lookup
-  * Optional: Ping
-  * Connect to website and print out webpage contents
-  * Disconnect
-SmartConfig is still beta and kind of works but is not fully vetted!
-It might not work on all networks!
-*/
+/*
+ * Reader.ino
+ */
 #include <Adafruit_CC3000.h>
 #include <ccspi.h>
 #include <SPI.h>
@@ -32,6 +8,7 @@ It might not work on all networks!
 #include "utility/debug.h"
 
 #include <Time.h>
+#include <ctype.h>
 
 // These are the interrupt and control pins
 #define ADAFRUIT_CC3000_IRQ   3  // MUST be an interrupt pin!
@@ -43,11 +20,10 @@ It might not work on all networks!
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT,
                                          SPI_CLOCK_DIVIDER); // you can change this clock speed
 
-#define WLAN_SSID       "CalVisitor"           // cannot be longer than 32 characters!
-#define WLAN_PASS       ""
+#define WLAN_SSID       "EECS-PSK"           // cannot be longer than 32 characters!
+#define WLAN_PASS       "Thequickbrown"
 // Security can be WLAN_SEC_UNSEC, WLAN_SEC_WEP, WLAN_SEC_WPA or WLAN_SEC_WPA2
-#define WLAN_SECURITY   WLAN_SEC_UNSEC
-
+#define WLAN_SECURITY   WLAN_SEC_WPA2
 #define IDLE_TIMEOUT_MS  3000      // Amount of time to wait (in milliseconds) with no data 
                                    // received before closing the connection.  If you know the server
                                    // you're accessing is quick to respond, you can reduce this value.
@@ -55,15 +31,18 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 // What page to grab!
 #define IDLE_TIMEOUT_MS  3000
 #define WEBSITE "data.sparkfun.com"
-#define WEBPAGE "/output/4JdODwdWr9hqg8K6xoRq.csv"
+/* ?gt[timestamp]=now%20-5min limits results to last 10 minutes */
+#define WEBPAGE "/output/4JdODwdWr9hqg8K6xoRq.json?gt[timestamp]=now%20-10min"
 #define PRIVATE "b5v8WyvXKNI27r1npAV2"
 
-#define BUF_SIZE 32 //for reading 
-#define SAMP_INTERVAL 10000 // milliseconds between running calculations and sending data
+#define BUF_SIZE 128 //for reading
+#define WRITE_BUF_SIZE 16//for writing a float string
+#define SAMP_INTERVAL 1000 // milliseconds between running calculations and sending data
 
 /* Non-network-related initializations */
 float steps;
 const int buttonInputPin = 2;
+const int actuatorPin = 4;
 boolean newMeasure = true;
 int count = 0;
 float avg = 0;
@@ -71,6 +50,7 @@ int lastWeight = 0;
 time_t lastTime;
 const int thresh = 30;
 char readBuf[BUF_SIZE];
+char writeBuf[WRITE_BUF_SIZE];
 
 /**************************************************************************/
 /*!
@@ -82,6 +62,40 @@ char readBuf[BUF_SIZE];
 uint32_t ip;
 
 void setup(void)
+{
+  pinMode(buttonInputPin, INPUT);
+  pinMode(actuatorPin, OUTPUT);
+  establishConnection();
+  digitalWrite(actuatorPin, HIGH);
+  delay(2000);
+  digitalWrite(actuatorPin, LOW);
+}
+
+void loop(void)
+{
+  readJSONToBuffer();
+  Serial.println("In read buffer: ");
+  Serial.println(readBuf);
+  getFirstValue(readBuf, writeBuf);
+  double steps = atof(writeBuf);
+  Serial.print("Final value: ");
+  Serial.println(steps);
+  if (steps != 0.0) {
+    digitalWrite(actuatorPin, HIGH);
+    delay(2000);
+    digitalWrite(actuatorPin, LOW);
+  }
+  delay(SAMP_INTERVAL);
+}
+
+
+/**************************************************************************/
+/*!
+    @brief  Tries to read the IP address and other connection details
+*/
+/**************************************************************************/
+
+void establishConnection(void)
 {
   Serial.begin(115200);
   Serial.println(F("Hello, CC3000!\n")); 
@@ -130,65 +144,14 @@ void setup(void)
   }
 
   cc3000.printIPdotsRev(ip);
-  
-  /* You need to make sure to clean up after yourself or the CC3000 can freak out */
-  /* the next time your try to connect ... */
-//  Serial.println(F("\n\nDisconnecting"));
-//  cc3000.disconnect();
-  
 }
 
-void loop(void)
+void handleFailedConnection(void)
 {
-  readCSV();
-  Serial.println("In read buffer: ");
-  Serial.println(readBuf);
-  delay(SAMP_INTERVAL);
+	cc3000.disconnect();
+	establishConnection();
 }
 
-/**************************************************************************/
-/*!
-    @brief  Begins an SSID scan and prints out all the visible networks
-*/
-/**************************************************************************/
-
-void listSSIDResults(void)
-{
-  uint32_t index;
-  uint8_t valid, rssi, sec;
-  char ssidname[33]; 
-
-  if (!cc3000.startSSIDscan(&index)) {
-    Serial.println(F("SSID scan failed!"));
-    return;
-  }
-
-  Serial.print(F("Networks found: ")); Serial.println(index);
-  Serial.println(F("================================================"));
-
-  while (index) {
-    index--;
-
-    valid = cc3000.getNextSSID(&rssi, &sec, ssidname);
-    
-    Serial.print(F("SSID Name    : ")); Serial.print(ssidname);
-    Serial.println();
-    Serial.print(F("RSSI         : "));
-    Serial.println(rssi);
-    Serial.print(F("Security Mode: "));
-    Serial.println(sec);
-    Serial.println();
-  }
-  Serial.println(F("================================================"));
-
-  cc3000.stopSSIDscan();
-}
-
-/**************************************************************************/
-/*!
-    @brief  Tries to read the IP address and other connection details
-*/
-/**************************************************************************/
 bool displayConnectionDetails(void)
 {
   uint32_t ipAddress, netmask, gateway, dhcpserv, dnsserv;
@@ -211,7 +174,7 @@ bool displayConnectionDetails(void)
 }
 
 /* Locs the first digit into readBuf */
-void readCSV()
+void readJSONToBuffer()
 {
   /* Set up socket and send input GET request */
   Serial.println("Connecting to website...");
@@ -225,7 +188,8 @@ void readCSV()
     www.fastrprint(F("\r\n"));
     www.println();
   } else {
-    Serial.println(F("Connection failed"));    
+    Serial.println(F("Connection failed")); 
+//    handleFailedConnection();   
     return;
   }
   
@@ -234,25 +198,22 @@ void readCSV()
   /* Read data until either the connection is closed, or the idle timeout is reached. */ 
   unsigned long lastRead = millis();
   int i = 0;
-  int reachedSecondLine = 0;
-  int reachedComma = 0;
+  int seenOpenBrace = 0;
+  int seenCloseBrace = 0;
   while (www.connected() && (millis() - lastRead < IDLE_TIMEOUT_MS)) {
     while (www.available()) {
       char c = www.read();
-//      if (!reachedSecondLine && c =='\n' || c =='\r\n') {
-//        reachedSecondLine = 1;
-//      }
-//      if (reachedSecondLine) {
-//        if (!reachedComma && c ==',') {
-//          reachedComma = 1;
-//          readBuf[i] = '\0';
-//        }
-//        if (!reachedComma && i < BUF_SIZE) {
-//          readBuf[i] = c;
-//          i++;
-//        }
-//      }
-      Serial.print(c);
+      if (!seenOpenBrace && c == '{') {
+        seenOpenBrace = 1;
+      }
+      if (seenOpenBrace && !seenCloseBrace) {
+        readBuf[i] = c;
+        i++;
+      }
+      if (seenOpenBrace && c == '}') {
+        seenCloseBrace = 1;
+      }
+//      Serial.print(c);
       lastRead = millis();
     }
   }
@@ -260,3 +221,18 @@ void readCSV()
   Serial.println(F("-------------------------------------"));
 }
 
+void getFirstValue(char *readBuf, char *writeBuf) {
+  int i = 0;
+  int j = 0;
+  do {
+    i++;
+  } while (*(readBuf + i) != ':');
+  i += 2; // pointer on :, skip : and "
+  while (*(readBuf + i) != '\"') {
+    *(writeBuf + j) = *(readBuf + i);
+    i++;
+    j++;
+  }
+  j++;
+  *(writeBuf + j) = '\0';
+}
