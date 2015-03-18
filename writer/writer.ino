@@ -12,7 +12,7 @@
 // Use hardware SPI for the remaining pins
 // On an UNO, SCK = 13, MISO = 12, and MOSI = 11
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT,
-                         SPI_CLOCK_DIVIDER); // you can change this clock speed
+                         SPI_CLOCK_DIV2); // you can change this clock speed
 
 
 #define IDLE_TIMEOUT_MS  3000
@@ -20,13 +20,15 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 #define WEBPAGE "/input/4JdODwdWr9hqg8K6xoRq.txt"
 #define PRIVATE "b5v8WyvXKNI27r1npAV2"
 
-#define WLAN_SSID       "CalVisitor"
-#define WLAN_PASS       ""
+#define WLAN_SSID       "secret"
+#define WLAN_PASS       "invention"
 #define WLAN_SECURITY   WLAN_SEC_WPA2
 // Security can be WLAN_SEC_UNSEC, WLAN_SEC_WEP, WLAN_SEC_WPA or WLAN_SEC_WPA2
 const int analogInPin0 = A0;  // Analog input pin that the FSR is attached to
 const int analogInPin1 = A1;  // Analog input pin that the FSR is attached to
 const int thresh = 30;
+const int pressThresh = 100;
+const int connectNotifyPin = 7;
 
 int sensorValue0 = 0;
 int sensorValue1 = 0;
@@ -40,6 +42,8 @@ time_t lastTime;
 Phant phant("data.sparkfun.com", "4JdODwdWr9hqg8K6xoRq", "b5v8WyvXKNI27r1npAV2");
 
 void setup() {
+  pinMode(connectNotifyPin, OUTPUT);
+  digitalWrite(connectNotifyPin, HIGH);
   Serial.begin(9600);
 
   Serial.println(F("\nInitializing..."));
@@ -75,7 +79,7 @@ void setup() {
   }
 
   cc3000.printIPdotsRev(ip);
-  
+  digitalWrite(connectNotifyPin, LOW);
 }
 
 void loop() {
@@ -83,13 +87,13 @@ void loop() {
   sensorValue1 = analogRead(analogInPin1);
 
   int newWeight = (sensorValue0);
-//  Serial.println(newWeight);
+  Serial.println(newWeight);
   if (newMeasure) {
     lastTime = now();
     newMeasure = false;
   } else {
     if ((now() - lastTime) < 10) {
-      if (newWeight > thresh && (lastWeight) < 30) {
+      if (newWeight > thresh && (lastWeight) < pressThresh) {
         Serial.println("count");
         count = count + 1;
       }
@@ -98,7 +102,9 @@ void loop() {
       newMeasure = true;
       avg = 1.0 * (count);
       Serial.println(avg);
+      digitalWrite(connectNotifyPin, HIGH);
       makePost(avg);
+      digitalWrite(connectNotifyPin, LOW);
       count = 0;
     }
     lastWeight = newWeight;

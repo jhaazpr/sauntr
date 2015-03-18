@@ -20,10 +20,10 @@
 Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT,
                                          SPI_CLOCK_DIV2); // you can change this clock speed
 
-#define WLAN_SSID       "CalVisitor"           // cannot be longer than 32 characters!
-#define WLAN_PASS       ""
+#define WLAN_SSID       "secret"           // cannot be longer than 32 characters!
+#define WLAN_PASS       "invention"
 // Security can be WLAN_SEC_UNSEC, WLAN_SEC_WEP, WLAN_SEC_WPA or WLAN_SEC_WPA2
-#define WLAN_SECURITY   WLAN_SEC_UNSEC
+#define WLAN_SECURITY   WLAN_SEC_WPA2
 #define IDLE_TIMEOUT_MS  3000      // Amount of time to wait (in milliseconds) with no data 
                                    // received before closing the connection.  If you know the server
                                    // you're accessing is quick to respond, you can reduce this value.
@@ -32,7 +32,7 @@ Adafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, ADAFRUIT_CC3000_IRQ
 #define IDLE_TIMEOUT_MS  3000
 #define WEBSITE "data.sparkfun.com"
 /* ?gt[timestamp]=now%20-5min limits results to last 10 minutes */
-#define WEBPAGE "/output/4JdODwdWr9hqg8K6xoRq.json?gt[timestamp]=now%20-10min"
+#define WEBPAGE "/output/4JdODwdWr9hqg8K6xoRq.json?gt[timestamp]=now%20-1hour"
 #define PRIVATE "b5v8WyvXKNI27r1npAV2"
 
 #define BUF_SIZE 128 //for reading
